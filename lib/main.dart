@@ -23,6 +23,7 @@ import 'package:ict3217_image_segmentation/helper/image_segmentation_helper.dart
 // import 'package:image_segmentation/helper/image_segmentation_helper.dart';
 import 'package:image/image.dart' as image_lib;
 import 'dart:ui' as ui;
+import 'home_screen.dart';
 
 late List<CameraDescription> _cameras;
 
@@ -33,10 +34,10 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -45,10 +46,11 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Image Segmentation Home Page'),
+      home: HomeScreen(), // Start with HomeScreen
     );
   }
 }
+
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});

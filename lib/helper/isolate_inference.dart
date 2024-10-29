@@ -71,9 +71,9 @@ class IsolateInference {
           (x) {
             final pixel = imageInput!.getPixel(x, y);
             return [
-              (pixel.r - 103.939),
-              (pixel.g - 116.779),
-              (pixel.b - 121.68),
+              (pixel.r - 103.969),
+              (pixel.g - 116.969),
+              (pixel.b - 121.969),
             ];
           },
         ),

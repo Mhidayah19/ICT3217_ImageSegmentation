@@ -42,17 +42,17 @@ model and its corresponding labels under assets.
 
 Alternatively, you can download our models, Windows can be run with the commands
 
-`models.bat`
+`./models.bat`
 
 While Linux and MacOS can be run with the commands
 
 `chmod +x models.sh` & `./models.sh`
 
-Do not forget to upddate 
+Do not forget to update: 
 
-'lib/core/constants/model_constants.dart' 
+1) `lib/core/constants/model_constants.dart` with the correct model name and path.
 
-with the correct model name and path.
+2) `pubspec.yaml` > `assets:` with the correct model folder path.
 
 ### About the sample
 

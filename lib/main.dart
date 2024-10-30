@@ -84,6 +84,7 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
         setState(() {});
       }
     });
+
   }
 
   Future<void> _imageAnalysis(CameraImage cameraImage) async {
@@ -190,32 +191,36 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
     });
   }
 
-  Widget cameraWidget(context) {
-    if (_cameraController == null) return Container();
-    // calculate scale to fit output image to screen
-    var scale = 1.0;
-    if (_displayImage != null) {
-      final minOutputSize = _displayImage!.width > _displayImage!.height
-          ? _displayImage!.height
-          : _displayImage!.width;
-      final minScreenSize =
-          MediaQuery.of(context).size.width > MediaQuery.of(context).size.height
-              ? MediaQuery.of(context).size.height
-              : MediaQuery.of(context).size.width;
-      scale = minScreenSize / minOutputSize;
+  Widget cameraWidget(BuildContext context) {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return Container();
     }
+
+    // Calculate scale to fit output image to screen dimensions
+    var scale = MediaQuery.of(context).size.aspectRatio *
+        _cameraController!.value.aspectRatio;
+
+    // Flip the scale if the aspect ratio is off (e.g., landscape preview on portrait device)
+    if (scale < 1) scale = 1 / scale;
+
     return Stack(
       children: [
-        CameraPreview(_cameraController!),
+        // Fullscreen Camera Preview
+        Transform.scale(
+          scale: scale,
+          child: Center(
+            child: CameraPreview(_cameraController!),
+          ),
+        ),
         if (_displayImage != null)
           Transform.scale(
             scale: scale,
             child: CustomPaint(
               painter: OverlayPainter()..updateImage(_displayImage!),
+              child: Container(),
             ),
           ),
         if (_labelsIndex != null)
-          // Align bottom
           Align(
             alignment: Alignment.bottomCenter,
             child: ListView.builder(
@@ -226,9 +231,8 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                   margin: const EdgeInsets.all(8),
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    // parse color from label color
-                    color: Color(ImageSegmentationHelper
-                            .labelColors[_labelsIndex![index]])
+                    color: Color(
+                        ImageSegmentationHelper.labelColors[_labelsIndex![index]])
                         .withOpacity(0.5),
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -242,21 +246,26 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
                 );
               },
             ),
-          )
+          ),
       ],
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Center(
-          child: Image.asset('assets/images/tfl_logo.png'),
+    return WillPopScope(
+      onWillPop: () async {
+        // Handle any cleanup or confirmation dialog here
+        return true; // Allow back navigation
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Center(),
+          backgroundColor: Colors.black,
         ),
-        backgroundColor: Colors.black.withOpacity(0.5),
+        body: cameraWidget(context),
       ),
-      body: cameraWidget(context),
     );
   }
 }

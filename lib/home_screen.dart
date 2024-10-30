@@ -8,7 +8,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 0, // Set AppBar height to 0
-        backgroundColor: Colors.transparent, // Make the AppBar background transparent
+        backgroundColor: Colors.black,
       ),
       body: Stack(
         children: [

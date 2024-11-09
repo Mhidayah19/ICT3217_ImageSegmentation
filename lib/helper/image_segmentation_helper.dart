@@ -17,48 +17,52 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/services.dart';
 import 'package:ict3217_image_segmentation/helper/isolate_inference.dart';
-// import 'package:image_segmentation/helper/isolate_inference.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'dart:isolate';
 
 class ImageSegmentationHelper {
-  late Interpreter _interpreter;
+  Interpreter? _interpreter;
   late List<String> _labels;
-  late IsolateInference _isolateInference;
+  IsolateInference? _isolateInference;  // Make nullable to control its initialization
   late List<int> _inputShape;
   late List<int> _outputShape;
 
-  static final labelColors = [
-    -16777216,
-    -8388608,
-    -16744448,
-    -8355840,
-    -16777088,
-    -8388480,
-    -16744320,
-    -8355712,
-    -12582912,
-    -4194304,
-    -12550144,
-    -4161536,
-    -12582784,
-    -4194176,
-    -12550016,
-    -4161408,
-    -16760832,
-    -8372224,
-    -16728064,
-    -8339456,
-    -16760704
-  ];
+  bool _isDisposed = false;
+  bool _isProcessing = false; // Flag to prevent concurrent inferences
 
-  _loadModel() async {
-    final options = InterpreterOptions();
-    _interpreter = await Interpreter.fromAsset('assets/deeplabv3_257_mv_gpu.tflite',
-        options: options);
+  bool isInterpreterInitialized() {
+    return _interpreter != null && !_isDisposed;
   }
 
-  _loadLabel() async {
+  void close() {
+    if (_isProcessing) return; // Ensure no inference is running
+    if (_interpreter != null && !_isDisposed) {
+      _interpreter!.close();
+      _interpreter = null;
+      _isDisposed = true;
+    }
+    _isolateInference?.stop(); // Ensure isolate is stopped
+    _isolateInference = null;
+  }
+
+  static final labelColors = [
+    -16777216, -8388608, -16744448, -8355840, -16777088, -8388480,
+    -16744320, -8355712, -12582912, -4194304, -12550144, -4161536,
+    -12582784, -4194176, -12550016, -4161408, -16760832, -8372224,
+    -16728064, -8339456, -16760704
+  ];
+
+  Future<void> _loadModel() async {
+    if (_isDisposed) return; // Prevent loading if disposed
+    final options = InterpreterOptions();
+    _interpreter = await Interpreter.fromAsset(
+      'assets/deeplabv3_257_mv_gpu.tflite',
+      options: options,
+    );
+  }
+
+  Future<void> _loadLabel() async {
+    if (_isDisposed) return; // Prevent loading if disposed
     final labelString = await rootBundle.loadString('assets/deeplabv3_257_mv_gpu.txt');
     _labels = labelString.split('\n');
   }
@@ -66,28 +70,38 @@ class ImageSegmentationHelper {
   Future<void> initHelper() async {
     await _loadModel();
     await _loadLabel();
-    _inputShape = _interpreter.getInputTensor(0).shape;
-    _outputShape = _interpreter.getOutputTensor(0).shape;
+
+    if (_interpreter != null && !_isDisposed) {
+      _inputShape = _interpreter!.getInputTensor(0).shape;
+      _outputShape = _interpreter!.getOutputTensor(0).shape;
+    }
+
     _isolateInference = IsolateInference();
-    await _isolateInference.start();
+    await _isolateInference!.start();
   }
 
-  Future<List<List<List<double>>>?> inferenceCameraFrame(
-      CameraImage cameraImage) async {
+  Future<List<List<List<double>>>?> inferenceCameraFrame(CameraImage cameraImage) async {
+    if (_isDisposed || _interpreter == null || _isProcessing) return null;
+
+    _isProcessing = true; // Set processing flag to prevent re-entry
     final inferenceModel = InferenceModel(
-        cameraImage, _interpreter.address, _inputShape, _outputShape);
-    ReceivePort responsePort = ReceivePort();
-    _isolateInference.sendPort
-        .send(inferenceModel..responsePort = responsePort.sendPort);
-    final results = await responsePort.first;
-    return results;
+        cameraImage, _interpreter!.address, _inputShape, _outputShape
+    );
+
+    try {
+      ReceivePort responsePort = ReceivePort();
+      _isolateInference?.sendPort.send(inferenceModel..responsePort = responsePort.sendPort);
+      final results = await responsePort.first;
+      return results;
+    } catch (e) {
+      print("Error during inference: $e");
+      return null;
+    } finally {
+      _isProcessing = false; // Reset processing flag
+    }
   }
 
-  getLabelsName(int index) {
+  String getLabelsName(int index) {
     return _labels[index];
-  }
-
-  close() {
-    _interpreter.close();
   }
 }

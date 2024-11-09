@@ -35,6 +35,9 @@ class IsolateInference {
         debugName: _debugName);
     _sendPort = await _receivePort.first;
   }
+  void stop() {
+    _isolate.kill(priority: Isolate.immediate);
+  }
 
   Future<void> close() async {
     _isolate.kill();

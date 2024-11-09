@@ -88,24 +88,33 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _imageAnalysis(CameraImage cameraImage) async {
-    // if image is still analyze, skip this frame
-    if (_isProcessing) {
-      return;
-    }
+    if (!_imageSegmentationHelper.isInterpreterInitialized()) return;
+
+    if (_isProcessing) return;
     _isProcessing = true;
-    // run image segmentation
-    final masks =
-        await _imageSegmentationHelper.inferenceCameraFrame(cameraImage);
-    _isProcessing = false;
-    if (mounted) {
-      // convert mask to image, if Platform is Android we need to swap width
-      // and height because camera image in android is landscape
-      _convertToImage(
+
+    try {
+      // Check again in case interpreter was disposed during setup
+      if (!_imageSegmentationHelper.isInterpreterInitialized()) return;
+
+      final masks = await _imageSegmentationHelper.inferenceCameraFrame(cameraImage);
+
+      if (masks != null && mounted) {
+        _convertToImage(
           masks,
           Platform.isIOS ? cameraImage.width : cameraImage.height,
-          Platform.isIOS ? cameraImage.height : cameraImage.width);
+          Platform.isIOS ? cameraImage.height : cameraImage.width,
+        );
+      }
+    } catch (e) {
+      print("Error during image analysis: $e");
+    } finally {
+      _isProcessing = false;
     }
   }
+
+
+
 
   _initHelper() {
     _imageSegmentationHelper = ImageSegmentationHelper();
@@ -123,10 +132,12 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _cameraController?.stopImageStream(); // Stop the stream explicitly
     _cameraController?.dispose();
     _imageSegmentationHelper.close();
     super.dispose();
   }
+
 
   // convert output mask to image
   void _convertToImage(List<List<List<double>>>? masks, int originImageWidth,
@@ -256,8 +267,9 @@ class _MyHomePageState extends State<MyHomePage> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        // Handle any cleanup or confirmation dialog here
-        return true; // Allow back navigation
+        _cameraController?.stopImageStream();
+        _imageSegmentationHelper.close();  // Ensure TensorFlow Lite resources are freed
+        return true;
       },
       child: Scaffold(
         appBar: AppBar(

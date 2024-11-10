@@ -19,6 +19,7 @@ import 'package:flutter/services.dart';
 import 'package:ict3217_image_segmentation/helper/isolate_inference.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'dart:isolate';
+import '../models/segmentation_model.dart';
 
 class ImageSegmentationHelper {
   Interpreter? _interpreter;
@@ -29,6 +30,10 @@ class ImageSegmentationHelper {
 
   bool _isDisposed = false;
   bool _isProcessing = false; // Flag to prevent concurrent inferences
+
+  final SegmentationModel model;
+
+  ImageSegmentationHelper({required this.model});
 
   bool isInterpreterInitialized() {
     return _interpreter != null && !_isDisposed;
@@ -56,14 +61,14 @@ class ImageSegmentationHelper {
     if (_isDisposed) return; // Prevent loading if disposed
     final options = InterpreterOptions();
     _interpreter = await Interpreter.fromAsset(
-      'assets/deeplabv3_257_mv_gpu.tflite',
+      model.modelPath,
       options: options,
     );
   }
 
   Future<void> _loadLabel() async {
     if (_isDisposed) return; // Prevent loading if disposed
-    final labelString = await rootBundle.loadString('assets/deeplabv3_257_mv_gpu.txt');
+    final labelString = await rootBundle.loadString(model.labelPath);
     _labels = labelString.split('\n');
   }
 

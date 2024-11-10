@@ -6,15 +6,18 @@ import '../helper/image_segmentation_helper.dart';
 import 'package:image/image.dart' as image_lib;
 import 'dart:ui' as ui;
 import '../widgets/overlay_painter.dart';
+import '../models/segmentation_model.dart';
 
 class CameraScreen extends StatefulWidget {
   final String title;
   final List<CameraDescription> cameras;
+  final SegmentationModel selectedModel;
 
   const CameraScreen({
-    super.key, 
+    super.key,
     required this.title,
     required this.cameras,
+    required this.selectedModel,
   });
 
   @override
@@ -66,7 +69,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   }
 
   void _initHelper() {
-    _imageSegmentationHelper = ImageSegmentationHelper();
+    _imageSegmentationHelper = ImageSegmentationHelper(model: widget.selectedModel);
     _imageSegmentationHelper.initHelper();
     _initCamera();
   }

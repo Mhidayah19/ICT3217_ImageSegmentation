@@ -3,6 +3,8 @@ import 'package:flutter/cupertino.dart';
 import 'camera_screen.dart';
 import 'package:camera/camera.dart';
 import '../core/constants/ui_constants.dart';
+import '../core/constants/model_constants.dart';
+import '../models/segmentation_model.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -14,14 +16,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _selectedModel = 'Model 1'; // Default selected model
-  final List<String> _availableModels = [
-    'Model 1',
-    'Model 2',
-    'Model 3',
-    'Model 4',
-    'Model 5',
-  ];
+  SegmentationModel _selectedModel = ModelConstants.availableModels[0];
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
       width: UIConstants.kModelButtonWidth,
       child: _CustomButton(
         onPressed: () => _showModelPicker(context),
-        label: _selectedModel,
+        label: _selectedModel.name,
         icon: Icons.model_training,
         backgroundColor: Colors.blue,
       ),
@@ -131,17 +126,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   backgroundColor: Colors.white,
                   itemExtent: 40,
                   scrollController: FixedExtentScrollController(
-                    initialItem: _availableModels.indexOf(_selectedModel),
+                    initialItem: ModelConstants.availableModels
+                        .indexOf(_selectedModel),
                   ),
                   onSelectedItemChanged: (int index) {
                     setState(() {
-                      _selectedModel = _availableModels[index];
+                      _selectedModel = ModelConstants.availableModels[index];
                     });
                   },
-                  children: _availableModels.map((String model) {
+                  children: ModelConstants.availableModels.map((model) {
                     return Center(
                       child: Text(
-                        model,
+                        model.name,
                         style: const TextStyle(
                           fontSize: 20,
                           color: Colors.black87,
@@ -243,6 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
         builder: (context) => CameraScreen(
           title: 'Image Segmentation',
           cameras: widget.cameras,
+          selectedModel: _selectedModel,
         ),
       ),
     );

@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'main.dart'; // Import the MyHomePage for navigation
+import 'image_upload_screen.dart';
+import 'package:image_picker/image_picker.dart';
 
 
 class HomeScreen extends StatelessWidget {
@@ -89,7 +93,12 @@ class HomeScreen extends StatelessWidget {
                             width: 160, // Set the width for the new button
                             child: ElevatedButton(
                               onPressed: () {
-                                print("Uploading image");
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const ImageUploadSegmentation(), // Navigate to ImageUploadScreen
+                                  ),
+                                );
                               },
                               style: ElevatedButton.styleFrom(
                                 foregroundColor: Colors.white,
@@ -117,7 +126,8 @@ class HomeScreen extends StatelessWidget {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const MyHomePage(title: 'Image Segmentation'),
+                                    //builder: (context) => const MyHomePage(title: 'Image Segmentation'),
+                                    builder: (context) => const CameraSegmentation(title: 'Image Segmentation'),
                                   ),
                                 );
                               },

@@ -7,6 +7,9 @@ import 'package:image/image.dart' as image_lib;
 import 'dart:ui' as ui;
 import '../widgets/overlay_painter.dart';
 import '../models/segmentation_model.dart';
+import 'package:image_gallery_saver/image_gallery_saver.dart';
+import '../widgets/capture_button.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class CameraScreen extends StatefulWidget {
   final String title;
@@ -27,6 +30,7 @@ class CameraScreen extends StatefulWidget {
 class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver {
   CameraController? _cameraController;
   bool _isProcessing = false;
+  bool _isCapturing = false;
   late CameraDescription _cameraDescription;
   late ImageSegmentationHelper _imageSegmentationHelper;
   ui.Image? _displayImage;
@@ -55,16 +59,25 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Future<void> _imageAnalysis(CameraImage cameraImage) async {
     if (_isProcessing) return;
     
-    _isProcessing = true;
-    final masks = await _imageSegmentationHelper.inferenceCameraFrame(cameraImage);
-    _isProcessing = false;
-    
-    if (mounted) {
-      _convertToImage(
-        masks,
-        Platform.isIOS ? cameraImage.width : cameraImage.height,
-        Platform.isIOS ? cameraImage.height : cameraImage.width,
-      );
+    try {
+      setState(() {
+        _isProcessing = true;
+      });
+      
+      final masks = await _imageSegmentationHelper.inferenceCameraFrame(cameraImage);
+      if (mounted && masks != null) {
+        await _convertToImage(
+          masks,
+          Platform.isIOS ? cameraImage.width : cameraImage.height,
+          Platform.isIOS ? cameraImage.height : cameraImage.width,
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     }
   }
 
@@ -89,8 +102,11 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     super.dispose();
   }
 
-  void _convertToImage(List<List<List<double>>>? masks, int originImageWidth,
-      int originImageHeight) async {
+  Future<void> _convertToImage(
+    List<List<List<double>>>? masks,
+    int originImageWidth,
+    int originImageHeight
+  ) async {
     if (masks == null) return;
     
     final width = masks.length;
@@ -215,6 +231,16 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             ),
           ),
         _buildLabelsList(),
+        Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 30),
+            child: CaptureButton(
+              onCapture: _captureAndSaveImage,
+              isProcessing: _isCapturing,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -233,7 +259,163 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     return minScreenSize / minOutputSize;
   }
 
-  
+  Future<void> _captureAndSaveImage() async {
+    if (!_canCapture()) return;
+
+    try {
+      setState(() => _isCapturing = true);
+      
+      if (!await _checkStoragePermission()) return;
+      
+      await _pauseCameraStream();
+      final capturedImage = await _captureImage();
+      if (capturedImage == null) return;
+      
+      final processedImage = await _processImage(capturedImage);
+      if (processedImage == null) return;
+      
+      await _saveImageToGallery(processedImage);
+    } catch (e) {
+      _showErrorMessage('Error capturing image: $e');
+    } finally {
+      await _resumeCameraStream();
+    }
+  }
+
+  bool _canCapture() {
+    if (_cameraController == null || _displayImage == null) {
+      _showErrorMessage('Camera or segmentation not ready');
+      return false;
+    }
+    if (_isCapturing) return false;
+    return true;
+  }
+
+  Future<bool> _checkStoragePermission() async {
+    final status = await Permission.storage.request();
+    if (!status.isGranted) {
+      _showErrorMessage('Storage permission is required to save images');
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _pauseCameraStream() async {
+    await _cameraController!.stopImageStream();
+    await Future.delayed(const Duration(milliseconds: 500));
+  }
+
+  Future<XFile?> _captureImage() async {
+    try {
+      return await _cameraController!.takePicture();
+    } catch (e) {
+      _showErrorMessage('Failed to capture image');
+      return null;
+    }
+  }
+
+  Future<Uint8List?> _processImage(XFile originalImage) async {
+    try {
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      
+      final imageData = await _prepareOriginalImage(originalImage);
+      if (imageData == null) return null;
+      
+      final imageSize = Size(
+        imageData.width.toDouble(),
+        imageData.height.toDouble()
+      );
+      
+      _drawImages(canvas, imageData, imageSize);
+      
+      return await _convertToBytes(recorder, imageSize);
+    } catch (e) {
+      _showErrorMessage('Failed to process image');
+      return null;
+    }
+  }
+
+  Future<ui.Image?> _prepareOriginalImage(XFile image) async {
+    final bytes = await image.readAsBytes();
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    return frame.image;
+  }
+
+  void _drawImages(Canvas canvas, ui.Image originalImage, Size imageSize) {
+    // Draw original image
+    canvas.drawImage(originalImage, Offset.zero, Paint());
+    
+    // Calculate scaling factors
+    final double scaleX = imageSize.width / _displayImage!.width;
+    final double scaleY = imageSize.height / _displayImage!.height;
+    
+    // Draw overlay with correct scaling and positioning
+    canvas.save();
+    canvas.scale(scaleX, scaleY);  // Scale proportionally
+    canvas.drawImage(
+      _displayImage!, 
+      Offset.zero,
+      Paint()..color = Colors.white.withOpacity(0.5)
+    );
+    canvas.restore();
+  }
+
+  Future<Uint8List?> _convertToBytes(ui.PictureRecorder recorder, Size imageSize) async {
+    final picture = recorder.endRecording();
+    final img = await picture.toImage(
+      imageSize.width.toInt(),
+      imageSize.height.toInt()
+    );
+    final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+    
+    return byteData?.buffer.asUint8List();
+  }
+
+  Future<void> _saveImageToGallery(Uint8List imageBytes) async {
+    final result = await ImageGallerySaver.saveImage(
+      imageBytes,
+      quality: 100,
+      name: "segmentation_${DateTime.now().millisecondsSinceEpoch}.png"
+    );
+
+    if (result['isSuccess']) {
+      _showSuccessMessage();
+    } else {
+      _showErrorMessage('Failed to save image');
+    }
+  }
+
+  Future<void> _resumeCameraStream() async {
+    _startImageStream();
+    if (mounted) {
+      setState(() => _isCapturing = false);
+    }
+  }
+
+  void _showSuccessMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Image saved to gallery'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  // Add this helper method to restart the image stream
+  void _startImageStream() {
+    _cameraController?.startImageStream(_imageAnalysis);
+  }
 
   @override
   Widget build(BuildContext context) {

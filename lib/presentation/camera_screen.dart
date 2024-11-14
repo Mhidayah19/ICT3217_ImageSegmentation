@@ -10,6 +10,7 @@ import '../models/segmentation_model.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import '../widgets/capture_button.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../widgets/segmentation_label_list.dart';
 
 class CameraScreen extends StatefulWidget {
   final String title;
@@ -184,37 +185,6 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     return frameInfo.image;
   }
 
-  Widget _buildLabelsList() {
-    if (_labelsIndex == null) return const SizedBox.shrink();
-    
-    return Align(
-      alignment: Alignment.bottomCenter,
-      child: ListView.builder(
-        shrinkWrap: true,
-        itemCount: _labelsIndex!.length,
-        itemBuilder: (context, index) {
-          return _buildLabelItem(_labelsIndex![index]);
-        },
-      ),
-    );
-  }
-
-  Widget _buildLabelItem(int labelIndex) {
-    return Container(
-      margin: const EdgeInsets.all(8),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Color(ImageSegmentationHelper.labelColors[labelIndex])
-            .withOpacity(0.5),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        _imageSegmentationHelper.getLabelsName(labelIndex),
-        style: const TextStyle(fontSize: 12),
-      ),
-    );
-  }
-
   Widget _buildCameraPreview() {
     if (_cameraController == null) return const SizedBox.shrink();
     
@@ -230,7 +200,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
               painter: OverlayPainter()..updateImage(_displayImage!),
             ),
           ),
-        _buildLabelsList(),
+        SegmentationLabelList(
+          labelsIndex: _labelsIndex,
+          imageSegmentationHelper: _imageSegmentationHelper,
+        ),
         Align(
           alignment: Alignment.bottomCenter,
           child: Padding(

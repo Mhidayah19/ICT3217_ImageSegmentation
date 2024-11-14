@@ -62,8 +62,12 @@ class ImageSegmentationHelper {
     print("Loading model...");
     try {
       final options = InterpreterOptions();
+      // _interpreter = await Interpreter.fromAsset(
+      //   'assets/deeplabv3_257_mv_gpu.tflite',
+      //   options: options,
+      // );
       _interpreter = await Interpreter.fromAsset(
-        'assets/deeplabv3_257_mv_gpu.tflite',
+        'assets/corrected_model.tflite',
         options: options,
       );
       print("Model loaded successfully.");
@@ -76,7 +80,8 @@ class ImageSegmentationHelper {
     if (_isDisposed) return;
     print("Loading labels...");
     try {
-      final labelString = await rootBundle.loadString('assets/deeplabv3_257_mv_gpu.txt');
+      // final labelString = await rootBundle.loadString('assets/deeplabv3_257_mv_gpu.txt');
+      final labelString = await rootBundle.loadString('assets/test.txt');
       _labels = labelString.split('\n');
       print("Labels loaded: ${_labels.length} labels found.");
     } catch (e) {

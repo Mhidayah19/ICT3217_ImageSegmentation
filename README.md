@@ -38,7 +38,15 @@ Note: If the app needs a refresh or restart, run comannds
 ### Download model and labels
 
 To build the project, you must enusre you have the Deeplab V3 (or any) TensorFlow Lite
-model and its corresponding labels under assets
+model and its corresponding labels under assets.
+
+Alternatively, you can download our models, Windows can be run with the commands
+
+`models.bat`
+
+While Linux and MacOS can be run with the commands
+
+`chmod +x models.sh` & `./models.sh`
 
 ### About the sample
 

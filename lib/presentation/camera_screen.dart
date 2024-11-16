@@ -11,7 +11,7 @@ import 'package:image_gallery_saver/image_gallery_saver.dart';
 import '../widgets/capture_button.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../widgets/segmentation_label_list.dart';
-
+import '../interfaces/segmentation_screen_interface.dart';
 class CameraScreen extends StatefulWidget {
   final String title;
   final List<CameraDescription> cameras;
@@ -28,7 +28,7 @@ class CameraScreen extends StatefulWidget {
   State<CameraScreen> createState() => _CameraScreenState();
 }
 
-class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver {
+class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver implements SegmentationScreenInterface {
   CameraController? _cameraController;
   bool _isProcessing = false;
   bool _isCapturing = false;
@@ -67,8 +67,10 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       
       final masks = await _imageSegmentationHelper.inferenceCameraFrame(cameraImage);
       if (mounted && masks != null) {
-        await _convertToImage(
+        await convertToImage(
           masks,
+          masks.length,
+          masks.first.length,
           Platform.isIOS ? cameraImage.width : cameraImage.height,
           Platform.isIOS ? cameraImage.height : cameraImage.width,
         );
@@ -82,17 +84,76 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     }
   }
 
-  void _initHelper() {
+  @override
+  ImageSegmentationHelper get imageSegmentationHelper => _imageSegmentationHelper;
+
+  @override
+  bool get isProcessing => _isProcessing;
+
+  @override
+  List<int>? get labelsIndex => _labelsIndex;
+
+  @override
+  void initHelper() {
     _imageSegmentationHelper = ImageSegmentationHelper(model: widget.selectedModel);
     _imageSegmentationHelper.initHelper();
     _initCamera();
   }
 
   @override
+  Future<void> convertToImage(
+    List<List<List<double>>> masks,
+    int maskWidth,
+    int maskHeight,
+    int originalWidth,
+    int originalHeight,
+  ) async {
+    if (masks.isEmpty) return;
+    
+    final imageMatrix = <int>[];
+    final labelsIndex = <int>{};
+
+    for (int i = 0; i < maskWidth; i++) {
+      for (int j = 0; j < maskHeight; j++) {
+        final score = masks[i][j];
+        final maxIndex = _findMaxScoreIndex(score);
+        
+        labelsIndex.add(maxIndex);
+        imageMatrix.addAll(getColorForLabel(maxIndex));
+      }
+    }
+
+    final convertedImage = await _createImage(
+      maskWidth, 
+      maskHeight, 
+      imageMatrix,
+      originalWidth, 
+      originalHeight,
+    );
+
+    setState(() {
+      _displayImage = convertedImage;
+      _labelsIndex = labelsIndex.toList();
+    });
+  }
+
+  @override
+  List<int> getColorForLabel(int labelIndex) {
+    if (labelIndex == 0) return [0, 0, 0, 0];
+    
+    final color = ImageSegmentationHelper.labelColors[labelIndex];
+    final r = (color & 0x00ff0000) >> 16;
+    final g = (color & 0x0000ff00) >> 8;
+    final b = (color & 0x000000ff);
+    
+    return [r, g, b, 127];
+  }
+
+  @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initHelper();
+      initHelper();
     });
   }
 

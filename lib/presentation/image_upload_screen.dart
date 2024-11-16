@@ -22,7 +22,7 @@ import 'package:image/image.dart' as image_lib;
 import 'dart:ui' as ui;
 import 'package:ict3217_image_segmentation/helper/image_segmentation_helper.dart';
 import '../models/segmentation_model.dart';
-
+import '../interfaces/segmentation_screen_interface.dart';
 class ImageUploadSegmentation extends StatefulWidget {
   final SegmentationModel selectedModel;
   const ImageUploadSegmentation({Key? key, required this.selectedModel}) : super(key: key);
@@ -31,14 +31,26 @@ class ImageUploadSegmentation extends StatefulWidget {
   _ImageUploadSegmentationState createState() => _ImageUploadSegmentationState();
 }
 
-class _ImageUploadSegmentationState extends State<ImageUploadSegmentation> {
+class _ImageUploadSegmentationState extends State<ImageUploadSegmentation> 
+    implements SegmentationScreenInterface {
   File? _selectedImage;
-  Uint8List? _segmentedImageBytes; // PNG bytes for the segmented mask
+  Uint8List? _segmentedImageBytes;
   late ImageSegmentationHelper _imageSegmentationHelper;
   List<int>? _labelsIndex;
   bool _isProcessing = false;
 
-  void _initHelper() {
+  // Interface implementations
+  @override
+  ImageSegmentationHelper get imageSegmentationHelper => _imageSegmentationHelper;
+
+  @override
+  bool get isProcessing => _isProcessing;
+
+  @override
+  List<int>? get labelsIndex => _labelsIndex;
+
+  @override
+  void initHelper() {
     print("Initializing segmentation helper...");
     _imageSegmentationHelper = ImageSegmentationHelper(model: widget.selectedModel);
     _imageSegmentationHelper.initHelper();
@@ -46,9 +58,71 @@ class _ImageUploadSegmentationState extends State<ImageUploadSegmentation> {
   }
 
   @override
+  Future<void> convertToImage(
+    List<List<List<double>>> masks,
+    int maskWidth,
+    int maskHeight,
+    int originalWidth,
+    int originalHeight,
+  ) async {
+    print("Converting segmentation mask to displayable image...");
+    try {
+      List<int> imageMatrix = [];
+      final labelsIndexSet = <int>{};
+
+      for (int i = 0; i < masks.length; i++) {
+        for (int j = 0; j < masks[i].length; j++) {
+          final maxScoreIndex = masks[i][j].indexWhere(
+              (v) => v == masks[i][j].reduce((a, b) => a > b ? a : b));
+          labelsIndexSet.add(maxScoreIndex);
+          imageMatrix.addAll(getColorForLabel(maxScoreIndex));
+        }
+      }
+
+      print("Image matrix created with ${imageMatrix.length} elements.");
+
+      final maskImage = image_lib.Image.fromBytes(
+        width: maskWidth,
+        height: maskHeight,
+        bytes: Uint8List.fromList(imageMatrix).buffer,
+        numChannels: 4,
+      );
+
+      print("Resizing mask image to original dimensions...");
+      final resizedImage = image_lib.copyResize(
+        maskImage, 
+        width: originalWidth, 
+        height: originalHeight
+      );
+
+      final Uint8List? pngBytes = image_lib.encodePng(resizedImage);
+
+      setState(() {
+        _segmentedImageBytes = pngBytes;
+        _labelsIndex = labelsIndexSet.toList();
+        print("Segmented image and labels set for display as bytes.");
+      });
+    } catch (e) {
+      print("Error in convertToImage: $e");
+    }
+  }
+
+  @override
+  List<int> getColorForLabel(int labelIndex) {
+    if (labelIndex == 0) return [0, 0, 0, 0];
+    
+    final color = ImageSegmentationHelper.labelColors[labelIndex];
+    final r = (color & 0x00ff0000) >> 16;
+    final g = (color & 0x0000ff00) >> 8;
+    final b = (color & 0x000000ff);
+    
+    return [r, g, b, 127];
+  }
+
+  @override
   void initState() {
     super.initState();
-    _initHelper();
+    initHelper();
   }
 
   @override
@@ -98,7 +172,13 @@ class _ImageUploadSegmentationState extends State<ImageUploadSegmentation> {
 
       if (mask != null) {
         print("Segmentation mask generated successfully.");
-        await _convertToImage(mask, resizedImage.width, resizedImage.height, image.width, image.height);
+        await convertToImage(
+          mask, 
+          resizedImage.width, 
+          resizedImage.height, 
+          image.width, 
+          image.height
+        );
       } else {
         throw Exception("Segmentation mask is null.");
       }
@@ -107,53 +187,6 @@ class _ImageUploadSegmentationState extends State<ImageUploadSegmentation> {
     } finally {
       setState(() => _isProcessing = false);
       print("Segmentation process completed.");
-    }
-  }
-
-  Future<void> _convertToImage(List<List<List<double>>> masks, int maskWidth,
-      int maskHeight, int originalWidth, int originalHeight) async {
-    print("Converting segmentation mask to displayable image...");
-    try {
-      List<int> imageMatrix = [];
-      final labelsIndexSet = <int>{};
-
-      for (int i = 0; i < masks.length; i++) {
-        for (int j = 0; j < masks[i].length; j++) {
-          final maxScoreIndex = masks[i][j].indexWhere((v) => v == masks[i][j].reduce((a, b) => a > b ? a : b));
-          labelsIndexSet.add(maxScoreIndex);
-
-          final color = ImageSegmentationHelper.labelColors[maxScoreIndex];
-          imageMatrix.addAll([
-            (color >> 16) & 0xFF,
-            (color >> 8) & 0xFF,
-            color & 0xFF,
-            maxScoreIndex == 0 ? 0 : 127,
-          ]);
-        }
-      }
-
-      print("Image matrix created with ${imageMatrix.length} elements.");
-
-      final maskImage = image_lib.Image.fromBytes(
-        width: maskWidth,
-        height: maskHeight,
-        bytes: Uint8List.fromList(imageMatrix).buffer,
-        numChannels: 4,
-      );
-
-      print("Resizing mask image to original dimensions...");
-      final resizedImage = image_lib.copyResize(maskImage, width: originalWidth, height: originalHeight);
-
-      // Encode resized image to PNG bytes
-      final Uint8List? pngBytes = image_lib.encodePng(resizedImage);
-
-      setState(() {
-        _segmentedImageBytes = pngBytes;
-        _labelsIndex = labelsIndexSet.toList();
-        print("Segmented image and labels set for display as bytes.");
-      });
-    } catch (e) {
-      print("Error in _convertToImage: $e");
     }
   }
 
@@ -187,7 +220,7 @@ class _ImageUploadSegmentationState extends State<ImageUploadSegmentation> {
                 ),
                 Positioned.fill(
                   child: Opacity(
-                    opacity: 0.5,
+                    opacity: 0.75,
                     child: Image.memory(
                       _segmentedImageBytes!,
                       width: 300,

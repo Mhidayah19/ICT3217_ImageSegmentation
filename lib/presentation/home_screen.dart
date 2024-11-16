@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import '../core/constants/ui_constants.dart';
 import '../core/constants/model_constants.dart';
 import '../models/segmentation_model.dart';
+import '../presentation/image_upload_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final List<CameraDescription> cameras;
@@ -206,12 +207,23 @@ class _HomeScreenState extends State<HomeScreen> {
     return SizedBox(
       width: UIConstants.kUploadButtonWidth,
       child: _CustomButton(
-        onPressed: () => print("Uploading image"),
+        onPressed: () => _navigateToImageUploadScreen(context),
         label: 'Image Upload',
         icon: Icons.image,
         backgroundColor: Colors.green,
         fontSize: UIConstants.kSmallFontSize,
         iconSize: UIConstants.kSmallIconSize,
+      ),
+    );
+  }
+
+  void _navigateToImageUploadScreen(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ImageUploadSegmentation(
+          selectedModel: _selectedModel,
+        ),
       ),
     );
   }

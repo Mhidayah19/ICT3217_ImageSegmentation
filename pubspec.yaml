@@ -71,8 +71,6 @@ flutter:
     - assets/images/
     - assets/
     - assets/models/DeepLabV3/
-    - assets/models/AloyBisnet/
-    - assets/models/Semantic/
 
   fonts:
     - family: Jura

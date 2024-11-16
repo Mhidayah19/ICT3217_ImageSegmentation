@@ -19,7 +19,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as image_lib;
-import 'dart:ui' as ui;
 import 'package:ict3217_image_segmentation/helper/image_segmentation_helper.dart';
 import '../models/segmentation_model.dart';
 import '../interfaces/segmentation_screen_interface.dart';

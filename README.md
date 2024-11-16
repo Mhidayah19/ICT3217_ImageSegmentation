@@ -48,6 +48,12 @@ While Linux and MacOS can be run with the commands
 
 `chmod +x models.sh` & `./models.sh`
 
+Do not forget to upddate 
+
+'lib/core/constants/model_constants.dart' 
+
+with the correct model name and path.
+
 ### About the sample
 
 - You can use Flutter-supported IDEs such as Android Studio or Visual Studio.

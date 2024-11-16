@@ -1,8 +1,5 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../helper/image_segmentation_helper.dart';
-import '../models/segmentation_model.dart';
-import 'dart:ui' as ui;
 
 abstract class SegmentationScreenInterface {
   // Core initialization and cleanup

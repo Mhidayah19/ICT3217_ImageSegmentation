@@ -77,6 +77,7 @@ class _ImageUploadSegmentationState extends State<ImageUploadSegmentation> {
     print("Starting segmentation...");
     setState(() => _isProcessing = true);
 
+
     try {
       print("Reading image bytes...");
       final imageBytes = await imageFile.readAsBytes();
@@ -159,69 +160,89 @@ class _ImageUploadSegmentationState extends State<ImageUploadSegmentation> {
   Widget build(BuildContext context) {
     print("Building UI...");
     return Scaffold(
-      appBar: AppBar(title: Text("Image Upload Segmentation"), backgroundColor: Colors.black),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ElevatedButton(
-            onPressed: _pickImage,
-            child: Text('Upload Image'),
-          ),
-
-          if (_isProcessing)
-            Center(child: CircularProgressIndicator()),
-
-          // Display overlay using a Stack widget
-          if (_selectedImage != null && _segmentedImageBytes != null && !_isProcessing) ...[
-            SizedBox(height: 20),
-            Stack(
-              alignment: Alignment.center,
+      appBar: AppBar(
+        title: Text("Image Upload Segmentation"),
+        backgroundColor: Colors.black,
+        elevation: 2,
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Image.file(
-                  _selectedImage!,
-                  width: 300,
-                  height: 300,
-                  fit: BoxFit.cover,
-                ),
-                Opacity(
-                  opacity: 0.5, // Adjust the opacity for better overlay visibility
-                  child: Image.memory(
-                    _segmentedImageBytes!,
-                    width: 300,
-                    height: 300,
-                    fit: BoxFit.cover,
+                // Conditionally render the button based on _isProcessing
+                if (!_isProcessing)
+                  ElevatedButton.icon(
+                    onPressed: _pickImage,
+                    icon: Icon(Icons.upload_file),
+                    label: Text('Upload Image'),
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
                   ),
-                ),
+                SizedBox(height: 30),
+                if (_isProcessing)
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 10), // Space between the loading indicator and text
+                      Text("Loading...", style: TextStyle(fontSize: 16)),
+                    ],
+                  ),
+                if (_selectedImage != null && _segmentedImageBytes != null && !_isProcessing)
+                  Column(
+                    children: [
+                      Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Image.file(
+                            _selectedImage!,
+                            width: 300,
+                            height: 300,
+                            fit: BoxFit.cover,
+                          ),
+                          Opacity(
+                            opacity: 0.5,
+                            child: Image.memory(
+                              _segmentedImageBytes!,
+                              width: 300,
+                              height: 300,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 20),
+                      Text("Segmented Image", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                SizedBox(height: 20),
+                if (_labelsIndex != null && !_isProcessing)
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Wrap(
+                      spacing: 8.0, // Space between the labels
+                      runSpacing: 4.0, // Space between lines of labels
+                      children: _labelsIndex!.map((label) {
+                        return Chip(
+                          label: Text(
+                            _imageSegmentationHelper.getLabelsName(label),
+                            style: TextStyle(fontSize: 14),
+                          ),
+                          backgroundColor: Color(ImageSegmentationHelper.labelColors[label]).withOpacity(0.5),
+                        );
+                      }).toList(),
+                    ),
+                  ),
               ],
             ),
-            SizedBox(height: 10),
-            Text("Segmented Image"),
-          ],
-
-          if (_labelsIndex != null && !_isProcessing)
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _labelsIndex!.length,
-                itemBuilder: (context, index) {
-                  print("Displaying label: ${_labelsIndex![index]}");
-                  return Container(
-                    margin: const EdgeInsets.all(8),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Color(ImageSegmentationHelper.labelColors[_labelsIndex![index]]).withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      _imageSegmentationHelper.getLabelsName(_labelsIndex![index]),
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  );
-                },
-              ),
-            ),
-        ],
+          ),
+        ),
       ),
     );
   }

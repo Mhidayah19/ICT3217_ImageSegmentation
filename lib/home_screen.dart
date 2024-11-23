@@ -54,8 +54,8 @@ class HomeScreen extends StatelessWidget {
 
                 // Rectangle box around buttons
                 Container(
-                  padding: const EdgeInsets.all(15),  // Padding inside the box
-                  margin: const EdgeInsets.symmetric(horizontal: 15), // Margin around the box
+                  padding: const EdgeInsets.all(20),  // Padding inside the box
+                  margin: const EdgeInsets.symmetric(horizontal: 20), // Margin around the box
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.35), // Background color of the box with opacity
                     borderRadius: BorderRadius.circular(12), // Rounded corners
@@ -63,7 +63,7 @@ class HomeScreen extends StatelessWidget {
                   child: Column(
                     children: <Widget>[
                       SizedBox(
-                        width: 290, // Set the width for the new button
+                        width: 270, // Set the width for the new button
                         child: ElevatedButton(
                           onPressed: () {
                             print("Selecting model");
@@ -79,18 +79,18 @@ class HomeScreen extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,  // Align text and icon center
                             children: [
                               const Text('Select A Model'),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 3),
                               Icon(Icons.model_training, size: 24),  // Replace with your desired icon or image
                             ],
                           ),
                         ),
                       ),
-                      const SizedBox(height: 15), // Space between the new button and the row
+                      const SizedBox(height: 10), // Space between the new button and the row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
                           SizedBox(
-                            width: 160, // Set the width for the new button
+                            width: 150, // Set the width for the new button
                             child: ElevatedButton(
                               onPressed: () {
                                 Navigator.push(
@@ -111,14 +111,14 @@ class HomeScreen extends StatelessWidget {
                                 mainAxisAlignment: MainAxisAlignment.center,  // Align text and icon center
                                 children: [
                                   const Text('Image Upload',
-                                      style: TextStyle(fontSize: 13)),
-                                  const SizedBox(width: 5),
-                                  Icon(Icons.image, size: 20),  // Replace with your desired icon or image
+                                      style: TextStyle(fontSize: 12.5)),
+                                  const SizedBox(width: 3),
+                                  Icon(Icons.image, size: 17),  // Replace with your desired icon or image
                                 ],
                               ),
                             ),
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 3),
                           SizedBox(
                             width: 120, // Set the width for the new button
                             child: ElevatedButton( // Space between the buttons
@@ -141,9 +141,9 @@ class HomeScreen extends StatelessWidget {
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,  // Align text and icon center
                                 children: [
-                                  const Text('Camera', style: TextStyle(fontSize: 13)),
+                                  const Text('Camera', style: TextStyle(fontSize: 12.5)),
                                   const SizedBox(width: 5),
-                                  Icon(Icons.camera_alt, size: 20),  // Replace with your desired icon or image
+                                  Icon(Icons.camera_alt, size: 17),  // Replace with your desired icon or image
                                 ],
                               ),
                             ),

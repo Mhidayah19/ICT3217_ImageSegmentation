@@ -77,6 +77,7 @@ class _ImageUploadSegmentationState extends State<ImageUploadSegmentation> {
     print("Starting segmentation...");
     setState(() => _isProcessing = true);
 
+    await Future.delayed(Duration(milliseconds: 300));
 
     try {
       print("Reading image bytes...");

@@ -125,8 +125,8 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       }
     }
 
-    // Apply the pixel prominence threshold (0.05%)
-    final threshold = (totalPixels * 0.0005).ceil();
+    // Apply the pixel prominence threshold
+    final threshold = (totalPixels * 0.050).ceil();
     final prominentLabels = pixelCounts.entries
         .where((entry) => entry.value >= threshold)
         .map((entry) => entry.key)

@@ -58,27 +58,45 @@ class _ImageUploadSegmentationState extends State<ImageUploadSegmentation>
 
   @override
   Future<void> convertToImage(
-    List<List<List<double>>> masks,
-    int maskWidth,
-    int maskHeight,
-    int originalWidth,
-    int originalHeight,
-  ) async {
+      List<List<List<double>>> masks,
+      int maskWidth,
+      int maskHeight,
+      int originalWidth,
+      int originalHeight,
+      ) async {
     print("Converting segmentation mask to displayable image...");
     try {
       List<int> imageMatrix = [];
+      final pixelCounts = <int, int>{};
+      final totalPixels = maskWidth * maskHeight;
       final labelsIndexSet = <int>{};
 
       for (int i = 0; i < masks.length; i++) {
         for (int j = 0; j < masks[i].length; j++) {
           final maxScoreIndex = masks[i][j].indexWhere(
-              (v) => v == masks[i][j].reduce((a, b) => a > b ? a : b));
+                  (v) => v == masks[i][j].reduce((a, b) => a > b ? a : b));
+
+          // Increment the pixel count for the label
+          pixelCounts[maxScoreIndex] = (pixelCounts[maxScoreIndex] ?? 0) + 1;
+
+          // Add the label to the labels index set
           labelsIndexSet.add(maxScoreIndex);
+
+          // Add the corresponding color for the label to the image matrix
           imageMatrix.addAll(getColorForLabel(maxScoreIndex));
         }
       }
 
       print("Image matrix created with ${imageMatrix.length} elements.");
+
+      // Apply the pixel prominence threshold
+      final threshold = (totalPixels * 0.050).ceil();
+      final prominentLabels = pixelCounts.entries
+          .where((entry) => entry.value >= threshold)
+          .map((entry) => entry.key)
+          .toList();
+
+      print("Prominent labels: $prominentLabels");
 
       final maskImage = image_lib.Image.fromBytes(
         width: maskWidth,
@@ -89,22 +107,24 @@ class _ImageUploadSegmentationState extends State<ImageUploadSegmentation>
 
       print("Resizing mask image to original dimensions...");
       final resizedImage = image_lib.copyResize(
-        maskImage, 
-        width: originalWidth, 
-        height: originalHeight
+          maskImage,
+          width: originalWidth,
+          height: originalHeight
       );
 
       final Uint8List? pngBytes = image_lib.encodePng(resizedImage);
 
       setState(() {
         _segmentedImageBytes = pngBytes;
-        _labelsIndex = labelsIndexSet.toList();
-        print("Segmented image and labels set for display as bytes.");
+        _labelsIndex = prominentLabels;  // Set the prominent labels
+        print("Segmented image and prominent labels set for display as bytes.");
       });
     } catch (e) {
       print("Error in convertToImage: $e");
     }
   }
+
+
 
   @override
   List<int> getColorForLabel(int labelIndex) {

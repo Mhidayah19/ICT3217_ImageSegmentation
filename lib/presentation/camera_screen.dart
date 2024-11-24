@@ -48,7 +48,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
           : ImageFormatGroup.yuv420,
       enableAudio: false,
     );
-    
+
     await _cameraController!.initialize().then((value) {
       _cameraController!.startImageStream(_imageAnalysis);
       if (mounted) {
@@ -59,12 +59,12 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   Future<void> _imageAnalysis(CameraImage cameraImage) async {
     if (_isProcessing) return;
-    
+
     try {
       setState(() {
         _isProcessing = true;
       });
-      
+
       final masks = await _imageSegmentationHelper.inferenceCameraFrame(cameraImage);
       if (mounted && masks != null) {
         await convertToImage(
@@ -102,50 +102,59 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
   @override
   Future<void> convertToImage(
-    List<List<List<double>>> masks,
-    int maskWidth,
-    int maskHeight,
-    int originalWidth,
-    int originalHeight,
-  ) async {
+      List<List<List<double>>> masks,
+      int maskWidth,
+      int maskHeight,
+      int originalWidth,
+      int originalHeight,
+      ) async {
     if (masks.isEmpty) return;
-    
+
     final imageMatrix = <int>[];
-    final labelsIndex = <int>{};
+    final pixelCounts = <int, int>{};
+    final totalPixels = maskWidth * maskHeight;
 
     for (int i = 0; i < maskWidth; i++) {
       for (int j = 0; j < maskHeight; j++) {
         final score = masks[i][j];
         final maxIndex = _findMaxScoreIndex(score);
-        
-        labelsIndex.add(maxIndex);
+
+        // Increment the pixel count for the label
+        pixelCounts[maxIndex] = (pixelCounts[maxIndex] ?? 0) + 1;
         imageMatrix.addAll(getColorForLabel(maxIndex));
       }
     }
 
+    // Apply the pixel prominence threshold (0.05%)
+    final threshold = (totalPixels * 0.0005).ceil();
+    final prominentLabels = pixelCounts.entries
+        .where((entry) => entry.value >= threshold)
+        .map((entry) => entry.key)
+        .toList();
+
     final convertedImage = await _createImage(
-      maskWidth, 
-      maskHeight, 
+      maskWidth,
+      maskHeight,
       imageMatrix,
-      originalWidth, 
+      originalWidth,
       originalHeight,
     );
 
     setState(() {
       _displayImage = convertedImage;
-      _labelsIndex = labelsIndex.toList();
+      _labelsIndex = prominentLabels;
     });
   }
 
   @override
   List<int> getColorForLabel(int labelIndex) {
     if (labelIndex == 0) return [0, 0, 0, 0];
-    
+
     final color = ImageSegmentationHelper.labelColors[labelIndex];
     final r = (color & 0x00ff0000) >> 16;
     final g = (color & 0x0000ff00) >> 8;
     final b = (color & 0x000000ff);
-    
+
     return [r, g, b, 127];
   }
 
@@ -170,7 +179,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     int originImageHeight
   ) async {
     if (masks == null) return;
-    
+
     final width = masks.length;
     final height = masks.first.length;
     final imageMatrix = <int>[];
@@ -180,7 +189,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       for (int j = 0; j < height; j++) {
         final score = masks[i][j];
         final maxIndex = _findMaxScoreIndex(score);
-        
+
         labelsIndex.add(maxIndex);
         imageMatrix.addAll(_getColorForLabel(maxIndex));
       }
@@ -200,25 +209,25 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   int _findMaxScoreIndex(List<double> scores) {
     int maxIndex = 0;
     double maxScore = scores[0];
-    
+
     for (int k = 1; k < scores.length; k++) {
       if (scores[k] > maxScore) {
         maxScore = scores[k];
         maxIndex = k;
       }
     }
-    
+
     return maxIndex;
   }
 
   List<int> _getColorForLabel(int labelIndex) {
     if (labelIndex == 0) return [0, 0, 0, 0];
-    
+
     final color = ImageSegmentationHelper.labelColors[labelIndex];
     final r = (color & 0x00ff0000) >> 16;
     final g = (color & 0x0000ff00) >> 8;
     final b = (color & 0x000000ff);
-    
+
     return [r, g, b, 127];
   }
 
@@ -242,46 +251,79 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     final bytes = image_lib.encodePng(resizedImage);
     final codec = await ui.instantiateImageCodec(bytes);
     final frameInfo = await codec.getNextFrame();
-    
+
     return frameInfo.image;
   }
 
   Widget _buildCameraPreview() {
     if (_cameraController == null) return const SizedBox.shrink();
-    
+
     final scale = _calculateScale();
-    
+
     return Stack(
       children: [
-        CameraPreview(_cameraController!),
+        // Camera Preview (background)
+        Align(
+          alignment: Alignment.topCenter,
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height, // Full height of the screen
+            width: MediaQuery.of(context).size.width,   // Full width of the screen
+            child: CameraPreview(_cameraController!),
+          ),
+        ),
         if (_displayImage != null)
           Transform.scale(
-            scale: scale,
+            scale: 0.9,
             child: CustomPaint(
               painter: OverlayPainter()..updateImage(_displayImage!),
             ),
           ),
-        SegmentationLabelList(
-          labelsIndex: _labelsIndex,
-          imageSegmentationHelper: _imageSegmentationHelper,
-        ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 30),
-            child: CaptureButton(
-              onCapture: _captureAndSaveImage,
-              isProcessing: _isCapturing,
+
+        // Grey space at the bottom of the screen (overlaying camera and segmentation)
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: Container(
+            color: Colors.grey.withOpacity(0.5), // White background
+            height: 60.0, // Height of the white space (adjust as needed)
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Segmentation labels
+                Padding(
+                  padding: const EdgeInsets.only(left: 10.0),
+                  child: SegmentationLabelList(
+                    labelsIndex: _labelsIndex,
+                    imageSegmentationHelper: _imageSegmentationHelper,
+                  ),
+                ),
+              ],
             ),
           ),
+        ),
+
+        // Capture button on top of the white space
+        Positioned(
+          bottom: 70, // Adjust to ensure the button is visible
+          left: 0,
+          right:0,
+          child:Center(// Adjust for left alignment of the button
+          child: CaptureButton(
+            onCapture: _captureAndSaveImage,
+            isProcessing: _isCapturing,
+          ),
+        ),
         ),
       ],
     );
   }
 
+
   double _calculateScale() {
     if (_displayImage == null) return 1.0;
-    
+
     final minOutputSize = _displayImage!.width > _displayImage!.height
         ? _displayImage!.height
         : _displayImage!.width;
@@ -289,7 +331,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
         MediaQuery.of(context).size.width > MediaQuery.of(context).size.height
             ? MediaQuery.of(context).size.height
             : MediaQuery.of(context).size.width;
-            
+
     return minScreenSize / minOutputSize;
   }
 
@@ -298,16 +340,17 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
 
     try {
       setState(() => _isCapturing = true);
-      
+
       if (!await _checkStoragePermission()) return;
-      
+      await _cameraController?.setFlashMode(FlashMode.off);
+
       await _pauseCameraStream();
       final capturedImage = await _captureImage();
       if (capturedImage == null) return;
-      
+
       final processedImage = await _processImage(capturedImage);
       if (processedImage == null) return;
-      
+
       await _saveImageToGallery(processedImage);
     } catch (e) {
       _showErrorMessage('Error capturing image: $e');
@@ -352,17 +395,17 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
     try {
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
-      
+
       final imageData = await _prepareOriginalImage(originalImage);
       if (imageData == null) return null;
-      
+
       final imageSize = Size(
         imageData.width.toDouble(),
         imageData.height.toDouble()
       );
-      
+
       _drawImages(canvas, imageData, imageSize);
-      
+
       return await _convertToBytes(recorder, imageSize);
     } catch (e) {
       _showErrorMessage('Failed to process image');
@@ -380,16 +423,16 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   void _drawImages(Canvas canvas, ui.Image originalImage, Size imageSize) {
     // Draw original image
     canvas.drawImage(originalImage, Offset.zero, Paint());
-    
+
     // Calculate scaling factors
     final double scaleX = imageSize.width / _displayImage!.width;
     final double scaleY = imageSize.height / _displayImage!.height;
-    
+
     // Draw overlay with correct scaling and positioning
     canvas.save();
     canvas.scale(scaleX, scaleY);  // Scale proportionally
     canvas.drawImage(
-      _displayImage!, 
+      _displayImage!,
       Offset.zero,
       Paint()..color = Colors.white.withOpacity(0.5)
     );
@@ -403,7 +446,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
       imageSize.height.toInt()
     );
     final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-    
+
     return byteData?.buffer.asUint8List();
   }
 
@@ -455,12 +498,11 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Center(
-          child: Image.asset('assets/images/tfl_logo.png'),
-        ),
+        title: Text("Camera"),
         backgroundColor: Colors.black.withOpacity(0.5),
       ),
       body: _buildCameraPreview(),
     );
   }
-} 
+
+}

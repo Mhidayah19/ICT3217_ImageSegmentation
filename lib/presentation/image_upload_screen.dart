@@ -194,8 +194,8 @@ class _ImageUploadSegmentationState extends State<ImageUploadSegmentation>
     print("Building UI...");
     return Scaffold(
       appBar: AppBar(
-        title: Text("Image Upload Segmentation"),
-        backgroundColor: Colors.black,
+        title: Text("Image Upload"),
+        backgroundColor: Colors.black.withOpacity(0.5),
         elevation: 2,
       ),
       body: Center(

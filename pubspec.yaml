@@ -69,8 +69,10 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/
-    - assets/
     - assets/models/DeepLabV3/
+    - assets/models/PSPNET/
+    - assets/models/VGG_UNet/
+    
 
   fonts:
     - family: Jura

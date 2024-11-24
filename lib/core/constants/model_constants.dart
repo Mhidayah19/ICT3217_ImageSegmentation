@@ -9,16 +9,16 @@ class ModelConstants {
       labelPath: 'assets/models/DeepLabV3/deeplabv3_257_mv_gpu.txt',
     ),
     SegmentationModel(
-      name: 'AloyBisnet',
-      folderPath: 'assets/models/AloyBisnet',
-      modelPath: 'assets/models/AloyBisnet/aloy_bisenet_model.tflite',
-      labelPath: 'assets/models/AloyBisnet/labels.txt',
+      name: 'PSPNET',
+      folderPath: 'assets/models/PSPNET',
+      modelPath: 'assets/models/PSPNET/pspnet_50_10epoch_320steps_augmentation.tflite',
+      labelPath: 'assets/models/PSPNET/pspnet_50_10epoch_320steps_augmentation.txt',
     ),
     SegmentationModel(
-      name: 'Semantic',
-      folderPath: 'assets/models/Semantic',
-      modelPath: 'assets/models/Semantic/semantic_model.tflite',
-      labelPath: 'assets/models/Semantic/semantic_model.txt',
+      name: 'VGG_UNet',
+      folderPath: 'assets/models/VGG_UNet',
+      modelPath: 'assets/models/VGG_UNet/vggunet_20epoch_256steps_augmentation.tflite',
+      labelPath: 'assets/models/VGG_UNet/vggunet_20epoch_256steps_augmentation.txt',
     ),
   ];
 } 

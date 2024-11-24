@@ -4,7 +4,7 @@
 set FOLDER_ID=1jpocvOx3MR-P3d85xIKgn2hkmqieJX8F
 
 :: Destination folder in your Flutter project (relative path)
-set DEST_FOLDER=.\assets
+set DEST_FOLDER=.\assets\models
 
 :: Check if Python is installed
 where python >nul 2>nul

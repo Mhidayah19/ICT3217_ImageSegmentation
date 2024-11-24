@@ -271,6 +271,7 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             child: CameraPreview(_cameraController!),
           ),
         ),
+        // Segmentation mask (CustomPaint overlay)
         if (_displayImage != null)
           Transform.scale(
             scale: 0.9,
@@ -278,14 +279,13 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
               painter: OverlayPainter()..updateImage(_displayImage!),
             ),
           ),
-
-        // Grey space at the bottom of the screen (overlaying camera and segmentation)
+        // Overlay: White space with labels on top of the segmentation mask
         Positioned(
           bottom: 0,
           left: 0,
           right: 0,
           child: Container(
-            color: Colors.grey.withOpacity(0.5), // White background
+            color: Colors.grey.withOpacity(0.8), // White background with opacity
             height: 60.0, // Height of the white space (adjust as needed)
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -303,18 +303,17 @@ class _CameraScreenState extends State<CameraScreen> with WidgetsBindingObserver
             ),
           ),
         ),
-
-        // Capture button on top of the white space
+        // Capture button on top of all elements
         Positioned(
-          bottom: 70, // Adjust to ensure the button is visible
+          bottom: 70, // Adjust to position above the white space
           left: 0,
-          right:0,
-          child:Center(// Adjust for left alignment of the button
-          child: CaptureButton(
-            onCapture: _captureAndSaveImage,
-            isProcessing: _isCapturing,
+          right: 0,
+          child: Center(
+            child: CaptureButton(
+              onCapture: _captureAndSaveImage,
+              isProcessing: _isCapturing,
+            ),
           ),
-        ),
         ),
       ],
     );

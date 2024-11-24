@@ -86,7 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         children: [
           _buildModelSelectionButton(),
-          const SizedBox(height: 15),
+          const SizedBox(height: 10),
           _buildActionButtons(),
         ],
       ),

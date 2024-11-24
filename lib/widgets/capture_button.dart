@@ -15,8 +15,8 @@ class CaptureButton extends StatelessWidget {
     return GestureDetector(
       onTap: isProcessing ? null : onCapture,
       child: Container(
-        height: 80,
-        width: 80,
+        height: 70,
+        width: 70,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(color: Colors.white, width: 4),
@@ -25,7 +25,7 @@ class CaptureButton extends StatelessWidget {
         child: isProcessing
           ? const Center(child: CircularProgressIndicator())
           : Container(
-              margin: const EdgeInsets.all(12),
+              margin: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,

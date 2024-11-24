@@ -143,45 +143,55 @@ class _CameraSegmentationState extends State<CameraSegmentation> with WidgetsBin
 
 
   // Converts output mask from segmentation model into an image for display
-  void _convertToImage(List<List<List<double>>>? masks, int originImageWidth,
-      int originImageHeight) async {
-    if (masks == null) return null;// Returns if there is no mask data
+  void _convertToImage(List<List<List<double>>>? masks, int originImageWidth, int originImageHeight) async {
+    if (masks == null) return;
 
     final width = masks.length; // Width of the output mask
     final height = masks.first.length; // Height of the output mask
 
     List<int> imageMatrix = []; // Stores RGBA values for each pixel in the mask
-    final labelsIndex = <int>{}; // Stores unique label indices for displaying label info
+    final labelsCount = <int, int>{}; // Map to count the number of pixels for each label
 
-    for (int i = 0; i < width; i++) { // Iterates over mask rows
+    for (int i = 0; i < width; i++) {
       final List<List<double>> row = masks[i];
-      for (int j = 0; j < height; j++) { // Iterates over mask columns
+      for (int j = 0; j < height; j++) {
         final List<double> score = row[j];
-        int maxIndex = 0; // Index of the maximum score (representing the label)
-        double maxScore = score[0]; // Initial max score is set to the first value
-        for (int k = 1; k < score.length; k++) { // Finds the label with the maximum score
+        int maxIndex = 0;
+        double maxScore = score[0];
+
+        for (int k = 1; k < score.length; k++) {
           if (score[k] > maxScore) {
             maxScore = score[k];
             maxIndex = k;
           }
         }
-        labelsIndex.add(maxIndex); // Adds the label index to the set of labels
 
-        if (maxIndex == 0) { // If label is background, add transparent pixel
-          imageMatrix.addAll([0, 0, 0, 0]);
+        labelsCount[maxIndex] = (labelsCount[maxIndex] ?? 0) + 1; // Increment the count for the label
+
+        if (maxIndex == 0) {
+          imageMatrix.addAll([0, 0, 0, 0]); // Transparent pixel for background
           continue;
         }
 
-        // // Extract color for label and add to imageMatrix as RGBA values
+        // Extract color for label and add to imageMatrix
         final color = ImageSegmentationHelper.labelColors[maxIndex];
-        // convert color to r,g,b
         final r = (color & 0x00ff0000) >> 16;
         final g = (color & 0x0000ff00) >> 8;
         final b = (color & 0x000000ff);
-        // alpha 50%
-        imageMatrix.addAll([r, g, b, 127]);
+        imageMatrix.addAll([r, g, b, 127]); // Alpha 50%
       }
     }
+
+    // Calculate prominence for each label
+    final totalPixels = width * height;
+    const double prominenceThreshold = 0.05; // Labels must occupy at least 5% of the image
+    final prominentLabels = labelsCount.entries
+        .where((entry) => entry.value / totalPixels >= prominenceThreshold)
+        .map((entry) => entry.key)
+        .toSet();
+
+    // Filter labels for display
+    final labelsIndex = prominentLabels;
 
     // Convert processed image data to a displayable format
     image_lib.Image convertedImage = image_lib.Image.fromBytes(
@@ -204,66 +214,55 @@ class _CameraSegmentationState extends State<CameraSegmentation> with WidgetsBin
     });
   }
 
-  // Widget to display the camera preview and segmentation overlay
   Widget cameraWidget(BuildContext context) {
-    // Check if the camera controller is available and initialized
     if (_cameraController == null || !_cameraController!.value.isInitialized) {
       return Container();
     }
 
-    // Calculate scale to fit output image to screen dimensions
-    var scale = MediaQuery.of(context).size.aspectRatio *
-        _cameraController!.value.aspectRatio;
-
-    // Flip the scale if the aspect ratio is off (e.g., landscape preview on portrait device)
+    var scale = MediaQuery.of(context).size.aspectRatio * _cameraController!.value.aspectRatio;
     if (scale < 1) scale = 1 / scale;
 
     return Stack(
       children: [
-        // Fullscreen Camera Preview with applied scaling
         Transform.scale(
-          scale: scale, // Scale the preview to fit screen dimensions
-          child: Center(
-            child: CameraPreview(_cameraController!), // Display the camera preview
-          ),
+          scale: scale,
+          child: Center(child: CameraPreview(_cameraController!)),
         ),
-
-        // Overlay the segmented image if it exists
         if (_displayImage != null)
           Transform.scale(
-            scale: scale, // Apply the same scale to keep overlays aligned
+            scale: scale,
             child: CustomPaint(
-              painter: OverlayPainter()..updateImage(_displayImage!), // Pass segmented image to painter
-              child: Container(), // Empty container as a placeholder
+              painter: OverlayPainter()..updateImage(_displayImage!),
+              child: Container(),
             ),
           ),
-
-        // Display label descriptions at the bottom of the screen if there are any labels
         if (_labelsIndex != null)
-          Align(
-            alignment: Alignment.bottomCenter, // Align labels at the bottom
-            child: ListView.builder(
-              shrinkWrap: true, // Constrain the list to minimum size
-              itemCount: _labelsIndex!.length, // Number of labels to display
-              itemBuilder: (context, index) {
-                return Container(
-                  margin: const EdgeInsets.all(8), // Margin around each label
-                  padding: const EdgeInsets.all(8), // Padding inside each label
-                  decoration: BoxDecoration(
-                    color: Color(
-                        ImageSegmentationHelper.labelColors[_labelsIndex![index]])
-                        .withOpacity(0.5), // Set color based on label with transparency
-                    borderRadius: BorderRadius.circular(8), // Rounded corners for each label
-                  ),
-                  child: Text(
-                    _imageSegmentationHelper
-                        .getLabelsName(_labelsIndex![index]),// Display label name
-                    style: const TextStyle(
-                      fontSize: 12, // Font size for label text
+          Positioned(
+            bottom: 10,
+            left: 0,
+            right: 0,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: _labelsIndex!.map((index) {
+                  final labelName = _imageSegmentationHelper.getLabelsName(index);
+                  final labelColor = Color(ImageSegmentationHelper.labelColors[index]).withOpacity(0.7);
+
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: labelColor,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ),
-                );
-              },
+                    child: Text(
+                      labelName,
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
           ),
       ],

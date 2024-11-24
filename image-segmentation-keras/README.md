@@ -20,6 +20,9 @@ On Command Prompt (Administrator):
 - pip install opencv-python
 - pip install matplotlib
 
+Download datasets from
+https://drive.google.com/drive/folders/15SyHA96fEzeaOllhU7yjrNBPysfGHqLQ
+
 To Train model
 python mobilenet_unet.py
 python mobilenet_bisenet.py

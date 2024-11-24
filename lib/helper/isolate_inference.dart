@@ -70,11 +70,10 @@ class IsolateInference {
           imageInput!.width,
           (x) {
             final pixel = imageInput!.getPixel(x, y);
-            // normalize -1 to 1
             return [
-              (pixel.r - 127.5) / 127.5,
-              (pixel.b - 127.5) / 127.5,
-              (pixel.g - 127.5) / 127.5
+              (pixel.r - 103.939),
+              (pixel.g - 116.779),
+              (pixel.b - 121.68),
             ];
           },
         ),

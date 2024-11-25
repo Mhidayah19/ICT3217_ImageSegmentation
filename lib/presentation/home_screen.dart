@@ -21,13 +21,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       appBar: _buildAppBar(),
       body: Stack(
         children: [
           _buildBackground(),
           _buildOverlay(),
-          _buildContent(),
+          _buildContent(screenWidth),
         ],
       ),
     );
@@ -51,21 +53,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildOverlay() {
     return Container(
-      color: UIConstants.kOverlayColor.withOpacity(0.3),
+      color: UIConstants.kOverlayColor.withOpacity(0.5),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(double screenWidth) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SizedBox(height: UIConstants.kTopSpacing),
+          const Spacer(flex: 2),
           _buildTitle(),
-          const SizedBox(height: UIConstants.kVerticalSpacing),
-          const SizedBox(height: UIConstants.kVerticalSpacing),
-          _buildButtonContainer(),
+          const Spacer(flex: 1),
+          _buildButtonContainer(screenWidth),
+          const Spacer(flex: 3),
         ],
       ),
     );
@@ -78,16 +80,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildButtonContainer() {
+  Widget _buildButtonContainer(double screenWidth) {
     return Container(
       padding: UIConstants.kSpacing,
       margin: UIConstants.kHorizontalSpacing,
       decoration: _buildContainerDecoration(),
       child: Column(
         children: [
-          _buildModelSelectionButton(),
+          _buildModelSelectionButton(screenWidth),
           const SizedBox(height: 10),
-          _buildActionButtons(),
+          _buildActionButtons(screenWidth),
         ],
       ),
     );
@@ -100,9 +102,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildModelSelectionButton() {
+  Widget _buildModelSelectionButton(double screenWidth) {
     return SizedBox(
-      width: UIConstants.kModelButtonWidth,
+      width: screenWidth * 0.8, // 80% of screen width
       child: _CustomButton(
         onPressed: () => _showModelPicker(context),
         label: _selectedModel.name,
@@ -192,28 +194,29 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(double screenWidth) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _buildUploadButton(),
+        Flexible(
+          child: _buildUploadButton(),
+        ),
         const SizedBox(width: UIConstants.kButtonSpacing),
-        _buildCameraButton(),
+        Flexible(
+          child: _buildCameraButton(),
+        ),
       ],
     );
   }
 
   Widget _buildUploadButton() {
-    return SizedBox(
-      width: UIConstants.kUploadButtonWidth,
-      child: _CustomButton(
-        onPressed: () => _navigateToImageUploadScreen(context),
-        label: 'Image Upload',
-        icon: Icons.image,
-        backgroundColor: Colors.green,
-        fontSize: UIConstants.kSmallFontSize,
-        iconSize: UIConstants.kSmallIconSize,
-      ),
+    return _CustomButton(
+      onPressed: () => _navigateToImageUploadScreen(context),
+      label: 'Image Upload',
+      icon: Icons.image,
+      backgroundColor: Colors.green,
+      fontSize: UIConstants.kSmallFontSize,
+      iconSize: UIConstants.kSmallIconSize,
     );
   }
 
@@ -229,18 +232,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCameraButton() {
-    return Builder(
-      builder: (context) => SizedBox(
-        width: UIConstants.kCameraButtonWidth,
-        child: _CustomButton(
-          onPressed: () => _navigateToCameraScreen(context),
-          label: 'Camera',
-          icon: Icons.camera_alt,
-          backgroundColor: Colors.red[400] ?? Colors.red,
-          fontSize: UIConstants.kSmallFontSize,
-          iconSize: UIConstants.kSmallIconSize,
-        ),
-      ),
+    return _CustomButton(
+      onPressed: () => _navigateToCameraScreen(context),
+      label: 'Camera',
+      icon: Icons.camera_alt,
+      backgroundColor: Colors.red[400] ?? Colors.red,
+      fontSize: UIConstants.kSmallFontSize,
+      iconSize: UIConstants.kSmallIconSize,
     );
   }
 

@@ -68,7 +68,7 @@ flutter:
     - assets/images/
     - assets/models/MobileNet_BiSeNet/
     - assets/models/MobileNet_UNet/
-
+    - assets/models/DeepLabV3/
   fonts:
     - family: Jura
       fonts:
